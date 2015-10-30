@@ -2,6 +2,8 @@ import niconico_chainer_models
 import pickle
 import argparse
 import urllib2
+import numpy
+import PIL.Image
 def fetch_image(url):
     response = urllib2.urlopen(url)
     image = numpy.asarray(PIL.Image.open(response).resize((224,224)), dtype=numpy.float32)
@@ -27,12 +29,7 @@ mean_image = numpy.load(open(args.mean))
 tags = [line.rstrip() for line in open(args.tags)]
 tag_dict = dict((i,tag) for i, tag in enumerate(tags))
 
-img_data = urllib2.urlopen(url).read()
-arr = numpy.asarray(bytearray(img_data), dtype=numpy.uint8)
-img = cv2.imdecode(arr,-1)
-
-img_resized = cv2.resize(img, (224, 224))
-img_preprocessed = (img_resized - mean_image).transpose((2,0,1))
+img_preprocessed = (to_bgr(fetch_image(args.image_url)) - mean_image).transpose((2, 0, 1))
 
 predicted = model.predict(numpy.array([img_preprocessed]))[0]
 
@@ -41,6 +38,5 @@ top_10_tag = [
     (tag_dict[key], float(value))
     for key, value in top_10 if value > 0
 ]
-print top_10_tag
 for tag, score in top_10_tag:
     print("tag: {} / score: {}".format(tag, score))
