@@ -1,7 +1,7 @@
 nico-illust tag prediction
 ==================================
 
-必要なモデルファイル、平均画像ファイル、タグ一覧は(nico-opendata.jp)<http://nico-opendata.jp>からダウンロードしてください
+必要なモデルファイル、平均画像ファイル、タグ一覧は[nico-opendata.jp](http://nico-opendata.jp)からダウンロードしてください。
 
 USAGE
 --------------
