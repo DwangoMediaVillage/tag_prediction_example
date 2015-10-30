@@ -1,0 +1,1 @@
+git+http://github.o-in.dwango.co.jp/Keisuke-Ogaki/niconico_chainer_models.git#egg=niconico_chainer_models
