@@ -14,3 +14,7 @@ python predict_tag.py \
   character_series_sorted.txt \
   http://lohas.nicoseiga.jp/thumb/605863i
 ```
+
+## License
+
+MIT License (see `LICENSE` file).
