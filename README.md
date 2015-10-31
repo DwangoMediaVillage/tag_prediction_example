@@ -6,11 +6,32 @@ nico-illust tag prediction
 USAGE
 --------------
 
+依存ライブラリのインストール
+
 ```
 pip install -r requirements.txt
+```
+
+CPUで実行
+
+```
 python predict_tag.py \
-  openmodel.dump\
-  mean_resized.dump \
-  character_series_sorted.txt \
+  --gpu=-1
+  nico_illust_tag_v0.dump\
+  mean.dump \
+  tags_character_series.txt \
+  http://lohas.nicoseiga.jp/thumb/605863i
+# tag: 東方 / score: 1.0
+# と出力
+```
+
+GPUで実行
+
+```
+python predict_tag.py \
+  --gpu=0
+  nico_illust_tag_v0.dump\
+  mean.dump \
+  tags_character_series.txt \
   http://lohas.nicoseiga.jp/thumb/605863i
 ```
