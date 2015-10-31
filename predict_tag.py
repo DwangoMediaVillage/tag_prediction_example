@@ -4,6 +4,7 @@ import argparse
 import urllib2
 import numpy
 import PIL.Image
+import chainer
 def fetch_image(url):
     response = urllib2.urlopen(url)
     image = numpy.asarray(PIL.Image.open(response).resize((224,224)), dtype=numpy.float32)
@@ -22,16 +23,26 @@ parser.add_argument("model")
 parser.add_argument("mean")
 parser.add_argument("tags")
 parser.add_argument("image_url")
+parser.add_argument("--gpu", type=int, default=-1)
 args = parser.parse_args()
 
+if args.gpu >= 0:
+    chainer.cuda.get_device(args.gpu).use()
+    xp = chainer.cuda.cupy
+else:
+    xp = numpy
+
 model = pickle.load(open(args.model))
+if args.gpu >= 0:
+    model.to_gpu()
+
 mean_image = numpy.load(open(args.mean))
 tags = [line.rstrip() for line in open(args.tags)]
 tag_dict = dict((i,tag) for i, tag in enumerate(tags))
 
 img_preprocessed = (to_bgr(fetch_image(args.image_url)) - mean_image).transpose((2, 0, 1))
 
-predicted = model.predict(numpy.array([img_preprocessed]))[0]
+predicted = model.predict(xp.array([img_preprocessed]))[0]
 
 top_10 = sorted(enumerate(predicted), key=lambda index_value: -index_value[1])[:30]
 top_10_tag = [

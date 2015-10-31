@@ -1,7 +1,7 @@
 git+http://github.o-in.dwango.co.jp/Keisuke-Ogaki/niconico_chainer_models.git#egg=niconico_chainer_models
 
 pillow
-chainer
+chainer==1.3
 numpy
 argparse
 
