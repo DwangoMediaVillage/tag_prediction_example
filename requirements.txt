@@ -1,7 +1,6 @@
 git+http://github.com/nico-opendata/niconico_chainer_models.git#egg=niconico_chainer_models
 
+six
 pillow
-chainer==1.3
-numpy
+chainer>=1.12
 argparse
-
