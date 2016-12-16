@@ -1,53 +1,82 @@
-import niconico_chainer_models
-import pickle
 import argparse
-import urllib2
-import numpy
-import PIL.Image
-import chainer
-def fetch_image(url):
-    response = urllib2.urlopen(url)
-    image = numpy.asarray(PIL.Image.open(response).resize((224,224)), dtype=numpy.float32)
-    if (not len(image.shape)==3): # not RGB
-        image = numpy.dstack((image, image, image))
-    if (image.shape[2]==4): # RGBA
-        image = image[:,:,:3]
-    return image
+import math
+import sys
 
-def to_bgr(image):
-    return image[:,:,[2,1,0]]
-    return numpy.roll(image, 1, axis=-1)
+import chainer
+import numpy
+import six
+from niconico_chainer_models.google_net import GoogLeNet
+from PIL import Image, ImageFile
+
+
+def resize(img, size):
+    h, w = img.size
+    ratio = size / float(min(h, w))
+    h_ = int(math.ceil(h * ratio))
+    w_ = int(math.ceil(w * ratio))
+    img = img.resize((h_, w_))
+    return img
+
+
+def fetch_image(url):
+
+    response = six.moves.urllib.request.urlopen(url)
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+    img = Image.open(response)
+
+    if img.mode != 'RGB':  # not RGB
+        img = img.convert('RGB')
+
+    img = resize(img, 224)
+
+    x = numpy.asarray(img).astype('f')
+    x = x[:224, :224, :3]  # crop
+
+    x /= 255.0  # normalize
+    x = x.transpose((2, 0, 1))
+    return x
+
 
 parser = argparse.ArgumentParser()
-parser.add_argument("model")
-parser.add_argument("mean")
-parser.add_argument("tags")
-parser.add_argument("image_url")
-parser.add_argument("--gpu", type=int, default=-1)
-args = parser.parse_args()
+parser.add_argument('--gpu', type=int, default=-1)
+parser.add_argument('--model', default='model.npz')
+parser.add_argument('--tags', default='tags.txt')
+parser.add_argument('image_url')
 
-if args.gpu >= 0:
-    chainer.cuda.get_device(args.gpu).use()
-    xp = chainer.cuda.cupy
-else:
-    xp = numpy
 
-model = pickle.load(open(args.model))
-if args.gpu >= 0:
-    model.to_gpu()
+if __name__ == '__main__':
 
-mean_image = numpy.load(open(args.mean))
-tags = [line.rstrip() for line in open(args.tags)]
-tag_dict = dict((i,tag) for i, tag in enumerate(tags))
+    args = parser.parse_args()
 
-img_preprocessed = (to_bgr(fetch_image(args.image_url)) - mean_image).transpose((2, 0, 1))
+    if args.gpu >= 0:
+        chainer.cuda.get_device(args.gpu).use()
+        xp = chainer.cuda.cupy
+    else:
+        xp = numpy
 
-predicted = model.predict(xp.array([img_preprocessed]))[0]
+    # load model
+    sys.stderr.write("\r model loading...")
+    model = GoogLeNet()
+    chainer.serializers.load_npz(args.model, model)
+    if args.gpu >= 0:
+        model.to_gpu()
 
-top_10 = sorted(enumerate(predicted), key=lambda index_value: -index_value[1])[:30]
-top_10_tag = [
-    (tag_dict[key], float(value))
-    for key, value in top_10 if value > 0
-]
-for tag, score in top_10_tag:
-    print("tag: {} / score: {}".format(tag, score))
+    # load tags
+    tags = [line.rstrip() for line in open(args.tags)]
+    tag_dict = dict((i, tag) for i, tag in enumerate(tags))
+
+    # load image
+    sys.stderr.write("\r image fetching...")
+    x = xp.array([fetch_image(args.image_url)])
+    z = xp.zeros((1, 8)).astype('f')
+
+    sys.stderr.write("\r tag predicting...")
+    predicted = model.tag(x, z).data[0]
+
+    sys.stderr.write("\r")
+    top_10 = sorted(enumerate(predicted), key=lambda index_value: -index_value[1])[:10]
+
+    for tag, score in top_10:
+        if tag in tag_dict:
+            tag_name = tag_dict[tag]
+            print("tag: {} / score: {}".format(tag_name, score))
